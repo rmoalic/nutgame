@@ -3,18 +3,22 @@
 import * as THREE from 'three';
 import * as GAME from './nutgame';
 
+const NUT_HEIGHT = 3;
+const BOLT_SPACING = 6;
+const BOLT_WIDTH = 10;
 
 class NutGameRenderer {
-    static geometry_bolt = new THREE.CylinderGeometry(1, 1, 12, 10);
-    static geometry_nut = new THREE.CylinderGeometry(2, 2, 3, 6, 1);
-    static bolt_material = new THREE.MeshStandardMaterial({ color: 0xfcba03});
-    static nut_material = new THREE.MeshStandardMaterial({ color: 0xfcba03});
+    static geometry_nut = new THREE.CylinderGeometry(2, 2, NUT_HEIGHT, 6, 1);
+    static bolt_material = new THREE.MeshStandardMaterial({color: 0xced4da});
+    static nut_material = new THREE.MeshStandardMaterial({color: 0xced4da});
 
     static material = [
-        new THREE.MeshStandardMaterial({color: 0x00ff00, metalness: 1.0}),
-        new THREE.MeshStandardMaterial({color: 0x0000ff, metalness: 1.0}),
-        new THREE.MeshStandardMaterial({color: 0xff0000, metalness: 1.0})
-    ];
+        new THREE.MeshStandardMaterial({color: 0xFFBE0B, metalness: 0.0}),
+        new THREE.MeshStandardMaterial({color: 0xFB5607, metalness: 0.0}),
+        new THREE.MeshStandardMaterial({color: 0xFF006E, metalness: 0.0}),
+        new THREE.MeshStandardMaterial({color: 0x8338EC, metalness: 0.0}),
+        new THREE.MeshStandardMaterial({color: 0x3E86FF, metalness: 0.0})
+    ]
 
     static bumpmap_thread = new THREE.TextureLoader().load("thread.jpg");
     static bumpmap_nut = new THREE.TextureLoader().load("scratch.jpg");
@@ -24,6 +28,11 @@ class NutGameRenderer {
         this.scene = scene;
         this.bolts_mesh = new Map();
         this.nut_mesh = new Map();
+
+        this.bolt_geometry_size = 1.0 * this.game.bolt_size * NUT_HEIGHT;
+        this.geometry_bolt = new THREE.CylinderGeometry(1, 1, this.bolt_geometry_size, BOLT_WIDTH);
+        this.geometry_bolt.translate(0, (this.bolt_geometry_size / 2.0), 0);
+
 
         NutGameRenderer.bumpmap_thread.wrapS = THREE.RepeatWrapping;
         NutGameRenderer.bumpmap_thread.rotation = Math.PI/2.366;
@@ -43,7 +52,7 @@ class NutGameRenderer {
             this.scene.add(n[1]);
         }
 
-        this.positionBolt(2, 5);
+        this.positionBolt(2, 7);
     }
 
     getBbox() {
@@ -66,10 +75,12 @@ class NutGameRenderer {
         for (let b of this.game.bolts) {
             const id = b.id;
 
-            const bolt = new THREE.Mesh(NutGameRenderer.geometry_bolt, NutGameRenderer.bolt_material);
+            const bolt = new THREE.Mesh(this.geometry_bolt, NutGameRenderer.bolt_material);
             const nut = new THREE.Mesh(NutGameRenderer.geometry_nut, NutGameRenderer.nut_material);
             nut.position.x  = 0;
-            nut.position.y = -5;
+            nut.position.y = - NUT_HEIGHT;
+            bolt.position.y = - 0.5 * NUT_HEIGHT; // ???
+            console.log(bolt.position);
             const a = new THREE.Group();
 
             a.add(nut);
@@ -85,7 +96,7 @@ class NutGameRenderer {
         for (let n of bolt.array) {
             const id = n.id;
 
-            const nut = new THREE.Mesh(NutGameRenderer.geometry_nut, NutGameRenderer.material[n.color % 3]);
+            const nut = new THREE.Mesh(NutGameRenderer.geometry_nut, NutGameRenderer.material[n.color % NutGameRenderer.material.length]);
             nut.rotation.y = Math.random() * (2 * Math.PI);
 
             this.nut_mesh.set(id, nut);
@@ -102,8 +113,8 @@ class NutGameRenderer {
                 let id_val = bolt_it.next().value;
                 if (id_val == undefined) break;
                 let curr_bolt = id_val[1].mesh;
-                curr_bolt.position.x = (6.0 * x) - 12.0;
-                curr_bolt.position.y = - (15.0 * y);
+                curr_bolt.position.x = (BOLT_SPACING * x) - ((BOLT_SPACING) * ((column % 2 == 0 ? column : column - 1) / 2));
+                curr_bolt.position.y = - ((this.bolt_geometry_size + (2 * BOLT_SPACING)) * y);
 
                 i++;
                 if (i >= nb_bolt) break;
@@ -135,29 +146,34 @@ class NutGameRenderer {
             let delay = 0;
             const b_mesh_from = this.bolts_mesh.get(moveA.from);
             const b_mesh_to = this.bolts_mesh.get(moveA.to);
-            const move_step_time = (moveA.duration / 3);
+            const move_step_time = (moveA.duration / 3); // TODO: the 2nd step should probably not have the same lenght as the other 2
+            const top_point = (this.game.bolt_size + 1) * NUT_HEIGHT;
+            let i = 0;
             for (let o of moveA.objs) {
                 const n_mesh = this.nut_mesh.get(o.id);
                 const start = this.nut_start_position.get(o.id);
 
-                let ndt = clamp(((dt - delay) / move_step_time), 0.0, 1.1);
-                if (ndt <= 1.0) {
-                    n_mesh.position.y = lerp(start.y, 15, ndt);
+                let step = 0;
+
+                if (step == 0) {
+                    let ndt = clamp(((dt - delay) / move_step_time), 0.0, 1.0);
+                    n_mesh.position.y = lerp(start.y, top_point, ndt);
                     n_mesh.rotation.y = lerp(0, 2 * Math.PI, ndt);
-                } else {
-                    ndt = clamp((((dt - delay) - move_step_time) / move_step_time), 0.0, 1.1);
-                    if (ndt <= 1.0) {
-                        n_mesh.position.x = lerp(b_mesh_from.mesh.position.x, b_mesh_to.mesh.position.x, ndt);
-                    } else {
-                        ndt = clamp((((dt - delay) - move_step_time * 2) / move_step_time), 0.0, 1.0);
-                        n_mesh.position.y = lerp(15, 0, ndt);
-                        n_mesh.rotation.y = lerp(2 * Math.PI, Math.random() * (Math.PI / 2), ndt);
-                    }
+                    if (ndt >= 1.0) step++;
                 }
-
-
-                
-                delay += 20;
+                if (step == 1) {
+                    let ndt = clamp((((dt - delay) - move_step_time) / move_step_time), 0.0, 1.0);
+                    n_mesh.position.x = lerp(b_mesh_from.mesh.position.x, b_mesh_to.mesh.position.x, ndt);
+                    if (ndt >= 1.0) step++;
+                }
+                if (step == 2) {
+                    let ndt = clamp((((dt - delay) - move_step_time * 2) / move_step_time), 0.0, 1.0);
+                    n_mesh.position.y = lerp(top_point, (moveA.to_prev_size + i) * NUT_HEIGHT, ndt);
+                    n_mesh.rotation.y = lerp(2 * Math.PI, Math.random() * (Math.PI / 2), ndt);
+                    if (ndt >= 1.0) step++;
+                }
+                delay += 30; //TODO: get the value from the game object
+                i += 1;
             }
         } else {
             let raised_bolt = this.game.select_from;
@@ -172,9 +188,9 @@ class NutGameRenderer {
                     const b_y = b_mesh.mesh.position.y;
                     n_mesh.position.x = b_x;
                     if (raise_last && b.array.length - 1 == j) {
-                        n_mesh.position.y = b_y + (3.0 * j + 1);
+                        n_mesh.position.y = b_y + (NUT_HEIGHT * j + 1);
                     } else {
-                        n_mesh.position.y = b_y + (3.0 * j);
+                        n_mesh.position.y = b_y + (NUT_HEIGHT * j);
                     }
                 }
             }

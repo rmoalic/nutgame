@@ -138,7 +138,7 @@ class NutGame {
         };
     }
 
-    click(id) {
+    click(id) { // TODO: block game when animating
         if (this.select_from == null) {
             if (! this.bolts[id].isEmpty()) {
                 this.select_from = id;
@@ -190,7 +190,6 @@ class NutGame {
     }
 
     doMove(id_from, id_to, nb) {
-        const bolt_current_size = this.bolts[id_from].length;
         const color = this.bolts[id_from].peek();
         const color_objs = this.bolts[id_from].popN(nb);
         this.move_nuts_animation = {
@@ -198,8 +197,9 @@ class NutGame {
             from: id_from,
             to: id_to,
             nb: nb,
+            to_prev_size: this.bolts[id_to].array.length,
             start_time: Date.now(),
-            duration: 200 + (20*nb)
+            duration: 250 + (30*nb) // TODO: put the extra time in a variable
         };
         this.bolts[id_to].pushAll(color_objs);
     }
