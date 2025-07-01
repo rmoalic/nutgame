@@ -2,7 +2,7 @@
 class Nut {
 
     static N = 0;
-    
+
     constructor (color) {
         this.color = color;
         this.id = Nut.N;
@@ -14,7 +14,7 @@ class Nut {
 class Bolt {
 
     static N = 0;
-    
+
     constructor (size, getColor = (x) => x) {
         this.size = size;
         this.getColor = getColor;
@@ -26,7 +26,7 @@ class Bolt {
     removeAll() {
         this.array.length = 0;
     }
-    
+
     isFull() {
         return this.array.length >= this.size;
     }
@@ -56,9 +56,9 @@ class Bolt {
         }
         return  ret;
     }
-    
+
     canPush(color_obj, nb) {
-        console.assert(nb < this.size, "");
+        console.assert(nb <= this.size, "");
         if (this.isEmpty()) {
             return nb;
         }
@@ -75,7 +75,7 @@ class Bolt {
         }
         return 0;
     }
-    
+
     push(color_obj) {
         this.array.push(color_obj);
     }
@@ -126,15 +126,40 @@ class NutGame {
         for (let i = 0; i < nb_bolts + 2; i++) {
             this.bolts[i] = new Bolt(bolt_size, (x) => x.color);
         }
+
+        this.select_from = null;
+        this.move_nuts_animation = {
+            from: 0,
+            from_pos: 0,
+            to: 0,
+            nb: 0,
+            start_time: 0,
+            duration: 1
+        };
     }
 
+    click(id) {
+        if (this.select_from == null) {
+            if (! this.bolts[id].isEmpty()) {
+                this.select_from = id;
+            }
+        } else {
+            let nb = this.canMove(this.select_from, id);
+            if (nb > 0) {
+                this.doMove(this.select_from, id, nb);
+                this.select_from = null;
+            } else {
+                this.select_from = null;
+            }
+        }
+    }
 
     emptyAllBolts() {
         for(let b = 0; b < this.nb_bolts; b++) {
             this.bolts[b].removeAll();
         }
     }
-    
+
     randomFillBolts() {
         this.emptyAllBolts();
         let colors_tray = new Array(this.nb_bolts);
@@ -165,8 +190,17 @@ class NutGame {
     }
 
     doMove(id_from, id_to, nb) {
+        const bolt_current_size = this.bolts[id_from].length;
         const color = this.bolts[id_from].peek();
         const color_objs = this.bolts[id_from].popN(nb);
+        this.move_nuts_animation = {
+            objs: color_objs,
+            from: id_from,
+            to: id_to,
+            nb: nb,
+            start_time: Date.now(),
+            duration: 200 + (20*nb)
+        };
         this.bolts[id_to].pushAll(color_objs);
     }
 
@@ -184,7 +218,7 @@ class NutGame {
         }
         return acc == this.nb_bolts;
     }
-    
+
     print() {
         for (let i = this.bolt_size - 1; i >= 0; i--) {
             let line = [];
@@ -224,7 +258,7 @@ class NutGame {
             }
         }
         console.log("won");
-        
+
     }
 }
 export {NutGame, Bolt};
