@@ -2,7 +2,6 @@
 
 // TODO: replay feature
 // TODO: random game size (nb bolts and nb nuts per bolt)
-// TODO: add background
 
 import * as THREE from 'three';
 
@@ -33,6 +32,56 @@ scene.add(light);
 
 const l = new THREE.AmbientLight(0x454545);
 scene.add(l);
+
+
+// ---------------
+
+const material_back = new THREE.ShaderMaterial( {
+
+    uniforms: {
+	time: { value: 1.0 },
+	resolution: { value: new THREE.Vector2() }
+    },
+
+    vertexShader:
+    `
+varying vec3 fragCoord;
+void main() {
+    vec4 c = modelMatrix * vec4(position, 1.0);
+    fragCoord = c.xyz;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`,
+    fragmentShader:
+    `
+uniform vec2 resolution;
+uniform float offset;
+uniform float time;
+varying vec3 fragCoord;
+
+void main()
+{
+    float h = normalize(fragCoord + offset).y;
+
+    float colorShift = cos(time / 10000.0);
+
+    vec3 color2 = vec3(0.64, 0.36, 0.02);
+    vec3 fogColor2 = clamp(color2 + colorShift, 0.5, 0.8);
+    vec3 fogColor1 = vec3(0.96, 0.61, 0.18);
+    vec3 col = mix(fogColor1, fogColor2, h);
+
+    gl_FragColor = vec4(col, 1.0);
+}
+`
+} );
+
+const geometry_back = new THREE.PlaneGeometry(500, 500); // TODO: adjust size and angle for camera
+const plane_back = new THREE.Mesh(geometry_back, material_back);
+plane_back.position.z = -10;
+scene.add(plane_back);
+
+// ---------------
+
 
 
 const raycaster = new THREE.Raycaster();
@@ -84,9 +133,9 @@ function positionCamera(camera, box, viewDirection = new THREE.Vector3(0, 0, 1))
     camera.updateProjectionMatrix();
 }
 
-function animate() {
+function animate(timestamp) {
     game_renderer.render();
-
+    material_back.uniforms.time.value = timestamp;
     renderer.render(scene, camera);
 }
 renderer.setAnimationLoop(animate);
