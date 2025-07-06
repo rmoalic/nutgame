@@ -47,5 +47,6 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
-        token: ${{ secrets.GITHUB_TOKEN }}
-        artifact_name: production-files
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifact_name: production-files
