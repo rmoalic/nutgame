@@ -105,9 +105,9 @@ function onMouseClick(event) {
                 game.lock();
 
                 setTimeout(() => {
-                    game.init();
+                    game.reinit();
                     game.randomFillBolts();
-                    game_renderer.init();
+                    game_renderer.reinit();
                     game.unlock();
                 }, 1000);
             }

@@ -129,7 +129,7 @@ class NutGame {
         for (let i = 0; i < this.nb_bolts + 2; i++) {
             this.bolts[i] = new Bolt(this.bolt_size, (x) => x.color);
         }
-
+        this.is_locked = false;
         this.select_from = null;
         this.move_nuts_animation = {
             from: 0,
@@ -141,12 +141,18 @@ class NutGame {
         };
     }
 
+    reinit() {
+        const lock = this.is_locked;
+        this.init();
+        this.is_locked = lock;
+    }
+
     lock() {
-        this.lock = true;
+        this.is_locked = true;
     }
 
     unlock() {
-        this.lock = false;
+        this.is_locked = false;
     }
 
     isAnimating(time) {
@@ -154,7 +160,7 @@ class NutGame {
     }
 
     click(id) {
-        if (this.lock == true) return;
+        if (this.is_locked == true) return;
         if (this.isAnimating(Date.now())) return;
         if (this.select_from == null) {
             if (! this.bolts[id].isEmpty()) {

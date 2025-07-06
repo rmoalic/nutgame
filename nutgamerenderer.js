@@ -1,6 +1,7 @@
 "use strict";
 
 import * as THREE from 'three';
+import * as TWEEN from "@tweenjs/tween.js";
 
 const NUT_HEIGHT = 3;
 const BOLT_SPACING = 6;
@@ -69,6 +70,10 @@ class NutGameRenderer {
         }
 
         this.positionBolt(2, 7);
+    }
+
+    reinit() {
+        this.init();
     }
 
     getBbox() {
@@ -142,10 +147,51 @@ class NutGameRenderer {
         }
     }
 
+    createAnimation() {
+        let moveA = this.game.move_nuts_animation;
+        const b_mesh_from = this.bolts_mesh[moveA.from];
+        const b_mesh_to = this.bolts_mesh[moveA.to];
+        const move_step_time = (moveA.duration / 3); // TODO: the 2nd step should probably not have the same lenght as the other 2
+
+        const top_point_from = {x: b_mesh_from.mesh.position.x, y: b_mesh_from.mesh.position.y + (this.game.bolt_size + 1) * NUT_HEIGHT};
+        const top_point_to = {x: b_mesh_to.mesh.position.x, y: b_mesh_to.mesh.position.y + (this.game.bolt_size + 1) * NUT_HEIGHT};
+
+        let ret = [];
+        let i = 0;
+        for (let o of moveA.objs) {
+            const group = new TWEEN.Group();
+            const n_mesh = this.nut_mesh.get(o.id);
+            const final_position = {x: b_mesh_to.mesh.position.x, y: b_mesh_to.mesh.position.y + (moveA.to_prev_size + i) * NUT_HEIGHT};
+
+            const a_top_from = new TWEEN.Tween(n_mesh.position)
+                  .delay(i * 30) // TODO: get the value from the game object
+                  .to(top_point_from, move_step_time)
+                  .easing(TWEEN.Easing.Quadratic.In);
+
+            const a_top_to = new TWEEN.Tween(n_mesh.position)
+                  .to(top_point_to, move_step_time)
+                  .easing(TWEEN.Easing.Linear.None);
+
+            const a_bttm_to = new TWEEN.Tween(n_mesh.position)
+                  .to(final_position, move_step_time)
+                  .easing(TWEEN.Easing.Quadratic.Out);
+
+            a_top_from.chain(a_top_to);
+            a_top_to.chain(a_bttm_to)
+
+            group.add(a_top_from);
+            group.add(a_top_to);
+            group.add(a_bttm_to);
+            ret.push({first: a_top_from, all: group});
+
+            i++;
+        }
+
+        return ret;
+    }
+
     render() {
         let time = Date.now();
-
-        let moveA = this.game.move_nuts_animation;
         let isMoving = this.game.isAnimating(time);
 
         if (! isMoving) {
@@ -153,51 +199,21 @@ class NutGameRenderer {
         } else {
             if (! this.start_animation) {
                 this.start_animation = true;
-                this.nut_start_position = new Map();
-                for (let o of moveA.objs) {
-                    const n_mesh = this.nut_mesh.get(o.id);
-                    this.nut_start_position.set(o.id, n_mesh.position);
+
+                this.anim = new TWEEN.Group();
+                const sa = this.createAnimation();
+                for (const a of sa) {
+                    for (const b of a.all.getAll()) {
+                        this.anim.add(b);
+                    }
+                    a.first.start();
                 }
             }
         }
 
-        if (isMoving) {
-            const dt = time - moveA.start_time;
-            let delay = 0;
-            const b_mesh_from = this.bolts_mesh[moveA.from];
-            const b_mesh_to = this.bolts_mesh[moveA.to];
-            const move_step_time = (moveA.duration / 3); // TODO: the 2nd step should probably not have the same lenght as the other 2
-            const top_point_from = b_mesh_from.mesh.position.y + (this.game.bolt_size + 1) * NUT_HEIGHT;
-            const top_point_to = b_mesh_to.mesh.position.y + (this.game.bolt_size + 1) * NUT_HEIGHT;
-            let i = 0;
-            for (let o of moveA.objs) {
-                const n_mesh = this.nut_mesh.get(o.id);
-                const start = this.nut_start_position.get(o.id);
+        if (this.anim !== undefined) this.anim.update();
 
-                let step = 0;
-
-                if (step == 0) {
-                    let ndt = clamp(((dt - delay) / move_step_time), 0.0, 1.0);
-                    n_mesh.position.y = lerp(start.y, top_point_from, ndt);
-                    n_mesh.rotation.y = lerp(0, 2 * Math.PI, ndt);
-                    if (ndt >= 1.0) step++;
-                }
-                if (step == 1) {
-                    let ndt = clamp((((dt - delay) - move_step_time) / move_step_time), 0.0, 1.0);
-                    n_mesh.position.x = lerp(b_mesh_from.mesh.position.x, b_mesh_to.mesh.position.x, ndt);
-                    if (ndt >= 1.0) step++;
-                }
-                if (step == 2) {
-                    let ndt = clamp((((dt - delay) - move_step_time * 2) / move_step_time), 0.0, 1.0);
-                    // TODO: fix animation on 2 layers game, going from bottom to top
-                    n_mesh.position.y = lerp(top_point_to, b_mesh_to.mesh.position.y + (moveA.to_prev_size + i) * NUT_HEIGHT, ndt);
-                    n_mesh.rotation.y = lerp(2 * Math.PI, Math.random() * (Math.PI / 2), ndt);
-                    if (ndt >= 1.0) step++;
-                }
-                delay += 30; //TODO: get the value from the game object
-                i += 1;
-            }
-        } else {
+        if (! isMoving) {
             let raised_bolt = this.game.select_from;
             for (let i = 0; i < this.game.bolts.length; i++) {
                 let b = this.game.bolts[i];
@@ -221,11 +237,4 @@ class NutGameRenderer {
 
 }
 
-function lerp(v0, v1, t) {
-    return v0 + t * (v1 - v0);
-}
-
-function clamp(number, min, max) {
-    return Math.max(min, Math.min(number, max));
-}
 export {NutGameRenderer};
