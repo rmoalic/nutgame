@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import * as TWEEN from "@tweenjs/tween.js";
 
+import ithreadUrl from './assets/thread.jpg'
+import iscratchUrl from './assets/scratch.jpg'
+
 const NUT_HEIGHT = 3;
 const BOLT_SPACING = 6;
 const BOLT_WIDTH = 10;
@@ -18,8 +21,8 @@ class NutGameRenderer {
         new THREE.MeshStandardMaterial({color: 0x3E86FF, metalness: 0.0})
     ]
 
-    static bumpmap_thread = new THREE.TextureLoader().load("thread.jpg");
-    static bumpmap_nut = new THREE.TextureLoader().load("scratch.jpg");
+    static bumpmap_thread = new THREE.TextureLoader().load(ithreadUrl);
+    static bumpmap_nut = new THREE.TextureLoader().load(iscratchUrl);
 
     constructor(game, scene) {
         this.game = game;
