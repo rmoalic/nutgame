@@ -23,14 +23,27 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Set GitHub Pages Base URL
+        id: set_base_url
+        run: |
+          REPO_NAME="${{ github.event.repository.name }}"
+          OWNER_NAME="${{ github.repository_owner }}"
+
+          if [ "$REPO_NAME" = "$OWNER_NAME" ]; then
+            GITHUB_PAGES_BASE_URL="https://${OWNER_NAME}.github.io/"
+          else
+            GITHUB_PAGES_BASE_URL="https://${OWNER_NAME}.github.io/${REPO_NAME}/"
+          fi
+
+          echo "Inferred GitHub Pages Base URL: $GITHUB_PAGES_BASE_URL"
+          echo "GITHUB_PAGES_BASE_URL=$GITHUB_PAGES_BASE_URL" >> $GITHUB_ENV
+          echo "pages_url=$GITHUB_PAGES_BASE_URL" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
 
       - name: Build project
-        run: npx vite build
+        run: npx vite build --base ${{ env.GITHUB_PAGES_BASE_URL }}
 
       - name: Upload production-ready build files
         uses: actions/upload-pages-artifact@v3
