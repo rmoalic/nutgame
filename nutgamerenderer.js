@@ -177,12 +177,23 @@ class NutGameRenderer {
                   .to(final_position, move_step_time)
                   .easing(TWEEN.Easing.Quadratic.Out);
 
+            const a_rot_from = new TWEEN.Tween(n_mesh.rotation)
+                  .to({y: 2 * Math.PI}, move_step_time);
+
+            const a_rot_to = new TWEEN.Tween(n_mesh.rotation)
+                  .to({y: Math.random() * (Math.PI / 2)}, move_step_time);
+
+            a_top_from.onStart(() => a_rot_from.start());
+            a_bttm_to.onStart(() => a_rot_to.start());
+
             a_top_from.chain(a_top_to);
             a_top_to.chain(a_bttm_to)
 
             group.add(a_top_from);
             group.add(a_top_to);
             group.add(a_bttm_to);
+            group.add(a_rot_from);
+            group.add(a_rot_to);
             ret.push({first: a_top_from, all: group});
 
             i++;
