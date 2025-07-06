@@ -1,5 +1,3 @@
-"use strict";
-
 // TODO: random game size (nb bolts and nb nuts per bolt)
 
 import * as THREE from 'three';

@@ -1,4 +1,3 @@
-"use strict";
 class Nut {
 
     static N = 0;
