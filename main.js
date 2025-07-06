@@ -1,9 +1,11 @@
+"use strict";
+
 // TODO: random game size (nb bolts and nb nuts per bolt)
 
 import * as THREE from 'three';
 
-import * as GAME from 'nutgame';
-import * as GAMERENDERER from 'nutgamerenderer';
+import * as GAME from './nutgame';
+import * as GAMERENDERER from './nutgamerenderer';
 
 var game = new GAME.NutGame(5, 4);
 game.randomFillBolts();

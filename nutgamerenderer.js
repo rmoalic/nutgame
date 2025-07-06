@@ -1,5 +1,7 @@
+"use strict";
+
 import * as THREE from 'three';
-import * as TWEEN from 'tween';
+import * as TWEEN from "@tweenjs/tween.js";
 
 const NUT_HEIGHT = 3;
 const BOLT_SPACING = 6;
