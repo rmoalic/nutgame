@@ -121,10 +121,13 @@ class NutGame {
     constructor(nb_bolts, bolt_size) {
         this.nb_bolts = nb_bolts;
         this.bolt_size = bolt_size;
+        this.init();
+    }
 
-        this.bolts = new Array(nb_bolts + 2);
-        for (let i = 0; i < nb_bolts + 2; i++) {
-            this.bolts[i] = new Bolt(bolt_size, (x) => x.color);
+    init() {
+        this.bolts = new Array(this.nb_bolts + 2);
+        for (let i = 0; i < this.nb_bolts + 2; i++) {
+            this.bolts[i] = new Bolt(this.bolt_size, (x) => x.color);
         }
 
         this.select_from = null;
@@ -138,7 +141,21 @@ class NutGame {
         };
     }
 
-    click(id) { // TODO: block game when animating
+    lock() {
+        this.lock = true;
+    }
+
+    unlock() {
+        this.lock = false;
+    }
+
+    isAnimating(time) {
+        return (this.move_nuts_animation.start_time + this.move_nuts_animation.duration) >= time;
+    }
+
+    click(id) {
+        if (this.lock == true) return;
+        if (this.isAnimating(Date.now())) return;
         if (this.select_from == null) {
             if (! this.bolts[id].isEmpty()) {
                 this.select_from = id;

@@ -1,6 +1,5 @@
 "use strict";
 
-// TODO: replay feature
 // TODO: random game size (nb bolts and nb nuts per bolt)
 
 import * as THREE from 'three';
@@ -18,7 +17,7 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight ); // TODO: handle window resizing (particulary for mobile)
 document.body.appendChild( renderer.domElement );
 
-const game_renderer = new GAMERENDERER.NutGameRenderer(game, scene);
+var game_renderer = new GAMERENDERER.NutGameRenderer(game, scene);
 
 function g_positionCamera() {
     positionCamera(camera, game_renderer.getBbox(), new THREE.Vector3(0, 0.1, 1.2));
@@ -39,8 +38,8 @@ scene.add(l);
 const material_back = new THREE.ShaderMaterial( {
 
     uniforms: {
-	time: { value: 1.0 },
-	resolution: { value: new THREE.Vector2() }
+        time: { value: 1.0 },
+        resolution: { value: new THREE.Vector2() }
     },
 
     vertexShader:
@@ -86,7 +85,6 @@ scene.add(plane_back);
 
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
-let movement = [];
 
 window.addEventListener('click', onMouseClick, false); // somehow slow on mobile
 window.addEventListener('resize', onWindowResize);
@@ -102,6 +100,17 @@ function onMouseClick(event) {
 
         if (raycaster.ray.intersectsBox(b.bbox)) {
             game.click(b.bolt_position); // TODO: this must be able to fail. currently playing to fast might break the animation (and the game)
+
+            if (game.isWon()) {
+                game.lock();
+
+                setTimeout(() => {
+                    game.init();
+                    game.randomFillBolts();
+                    game_renderer.init();
+                    game.unlock();
+                }, 1000);
+            }
         }
     }
 }

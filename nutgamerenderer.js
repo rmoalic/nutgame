@@ -1,7 +1,6 @@
 "use strict";
 
 import * as THREE from 'three';
-import * as GAME from './nutgame';
 
 const NUT_HEIGHT = 3;
 const BOLT_SPACING = 6;
@@ -26,12 +25,6 @@ class NutGameRenderer {
     constructor(game, scene) {
         this.game = game;
         this.scene = scene;
-        this.bolts_mesh = new Map();
-        this.nut_mesh = new Map();
-
-        this.bolt_geometry_size = 1.0 * this.game.bolt_size * NUT_HEIGHT;
-        this.geometry_bolt = new THREE.CylinderGeometry(1, 1, this.bolt_geometry_size, BOLT_WIDTH);
-        this.geometry_bolt.translate(0, (this.bolt_geometry_size / 2.0), 0);
 
 
         NutGameRenderer.bumpmap_thread.wrapS = THREE.RepeatWrapping;
@@ -43,11 +36,31 @@ class NutGameRenderer {
         NutGameRenderer.nut_material.bumpMap = NutGameRenderer.bumpmap_nut;
         NutGameRenderer.nut_material.bumpScale = 0.5;
 
+        this.init();
+    }
+
+    init() {
+        if (this.bolts_group !== undefined) {
+            this.scene.remove(this.bolts_group);
+        }
+        if (this.nut_mesh !== undefined) {
+            for (let n of this.nut_mesh) {
+                this.scene.remove(n[1]);
+            }
+        }
+
+        this.bolts_mesh = new Array();
+        this.nut_mesh = new Map();
+
+        this.bolt_geometry_size = 1.0 * this.game.bolt_size * NUT_HEIGHT;
+        this.geometry_bolt = new THREE.CylinderGeometry(1, 1, this.bolt_geometry_size, BOLT_WIDTH);
+        this.geometry_bolt.translate(0, (this.bolt_geometry_size / 2.0), 0);
+
         this.createMesh();
 
         this.bolts_group = new THREE.Group();
         for (let b of this.bolts_mesh) {
-            this.bolts_group.add(b[1].mesh);
+            this.bolts_group.add(b.mesh);
         }
         this.scene.add(this.bolts_group);
 
@@ -66,8 +79,8 @@ class NutGameRenderer {
         let ret = [];
         for (let b of this.bolts_mesh) {
             ret.push({
-                bolt_position: b[1].position,
-                bbox: new THREE.Box3().setFromObject(b[1].mesh, true)
+                bolt_position: b.position,
+                bbox: new THREE.Box3().setFromObject(b.mesh, true)
             });
         }
         return ret;
@@ -93,7 +106,7 @@ class NutGameRenderer {
             a.add(nut);
             a.add(bolt);
 
-            this.bolts_mesh.set(id, {mesh: a, position: i});
+            this.bolts_mesh.push({mesh: a, position: i, id: id});
             this.createMeshForNuts(b);
             i++;
         }
@@ -119,7 +132,7 @@ class NutGameRenderer {
             for (let x = 0; x < column; x++) {
                 let id_val = bolt_it.next().value;
                 if (id_val == undefined) break;
-                let curr_bolt = id_val[1].mesh;
+                let curr_bolt = id_val.mesh;
                 curr_bolt.position.x = (BOLT_SPACING * x) - ((BOLT_SPACING) * ((column % 2 == 0 ? column : column - 1) / 2));
                 curr_bolt.position.y = - ((this.bolt_geometry_size + (1.5 * BOLT_SPACING)) * y);
 
@@ -133,7 +146,7 @@ class NutGameRenderer {
         let time = Date.now();
 
         let moveA = this.game.move_nuts_animation;
-        let isMoving = (moveA.start_time + moveA.duration) >= time;
+        let isMoving = this.game.isAnimating(time);
 
         if (! isMoving) {
             this.start_animation = false;
@@ -151,8 +164,8 @@ class NutGameRenderer {
         if (isMoving) {
             const dt = time - moveA.start_time;
             let delay = 0;
-            const b_mesh_from = this.bolts_mesh.get(moveA.from);
-            const b_mesh_to = this.bolts_mesh.get(moveA.to);
+            const b_mesh_from = this.bolts_mesh[moveA.from];
+            const b_mesh_to = this.bolts_mesh[moveA.to];
             const move_step_time = (moveA.duration / 3); // TODO: the 2nd step should probably not have the same lenght as the other 2
             const top_point_from = b_mesh_from.mesh.position.y + (this.game.bolt_size + 1) * NUT_HEIGHT;
             const top_point_to = b_mesh_to.mesh.position.y + (this.game.bolt_size + 1) * NUT_HEIGHT;
@@ -188,7 +201,7 @@ class NutGameRenderer {
             let raised_bolt = this.game.select_from;
             for (let i = 0; i < this.game.bolts.length; i++) {
                 let b = this.game.bolts[i];
-                const b_mesh = this.bolts_mesh.get(b.id);
+                const b_mesh = this.bolts_mesh.find(x => x.id == b.id);
                 let raise_last = raised_bolt == i;
 
                 for (let j = 0; j < b.array.length; j++) {
